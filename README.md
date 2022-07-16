@@ -26,6 +26,8 @@ Flags:
   -c, --config string          config file (default is $HOME/.disk_usage_exporter.yaml)
   -l, --dir-level int          Directory nesting level to show (0 = only selected dir) (default 2)
   -h, --help                   help for disk_usage_exporter
+  -m, --mode string            Exposition method - either 'file' or 'http' (default "http")
+  -f, --output-file string     Target file to store metrics in (default "./disk-usage-exporter.prom")
   -i, --ignore-dirs strings    Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run,/var/cache/rsnapshot])
 ```
 
@@ -78,12 +80,25 @@ Disk usage of `/var` directory:
 sum(node_disk_usage_bytes{path=~"/var.*"})
 ```
 
-## Example config file
+## Example config files
 
 `~/.disk_usage_exporter.yaml`:
 ```yaml
 analyzed-path: /
 bind-address: 0.0.0.0:9995
+dir-level: 2
+ignore-dirs:
+- /proc
+- /dev
+- /sys
+- /run
+```
+
+`~/.disk_usage_exporter.yaml`:
+```yaml
+analyzed-path: /
+mode: file
+output-file: ./disk-usage-exporter.prom
 dir-level: 2
 ignore-dirs:
 - /proc
@@ -105,6 +120,15 @@ scrape_configs:
     static_configs:
     - targets: ['localhost:9995']
 ```
+
+## Dump to file
+
+The official `node-exporter` allows to specify a folder which contains additional metric files through a [textfile collection mechanism](https://github.com/prometheus/node_exporter#textfile-collector).
+In order to make use of this, one has to set up `node-exporter` according to the documentation and set the `output-file`
+of this exporter to any name ending in `.prom` within said folder (and of course also `mode` to `file`).
+
+A common use case for this is when the calculation of metrics takes particularly long and therefore can only be done
+once in a while. To automate the periodic update of the output file, simply set up a cronjob.
 
 ## Example systemd unit file
 

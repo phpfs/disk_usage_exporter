@@ -28,11 +28,11 @@ var (
 		},
 		[]string{"path"},
 	)
+	collectors = []prometheus.Collector{diskUsage, diskUsageLevel1}
 )
 
 func init() {
-	prometheus.MustRegister(diskUsage)
-	prometheus.MustRegister(diskUsageLevel1)
+	prometheus.MustRegister(collectors...)
 }
 
 // Exporter is the type to be used to start HTTP server and run the analysis
@@ -84,6 +84,20 @@ func (e *Exporter) reportItem(item fs.Item, level int) {
 			e.reportItem(entry, level+1)
 		}
 	}
+}
+
+func (e *Exporter) WriteToTextfile(name string) {
+	e.runAnalysis()
+
+	// Use a custom registry to drop go stats
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectors...)
+
+	err := prometheus.WriteToTextfile(name, registry)
+	if err != nil {
+		log.Fatalf("WriteToTextfile error: %v", err)
+	}
+	log.Printf("Stored stats in file %s", name)
 }
 
 func (e *Exporter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
